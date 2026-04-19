@@ -148,6 +148,15 @@
   .card .icon { font-size: 24px; margin-bottom: 6px; }
   .card .label { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
   .card .value { font-size: 30px; font-weight: 200; line-height: 1; }
+  .card .value.value-text {
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1.1;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .card .unit { font-size: 13px; opacity: 0.5; margin-left: 2px; }
   .card .secondary { font-size: 11px; opacity: 0.55; margin-top: 6px; }
 
@@ -310,8 +319,8 @@
       <div class="card" id="cardLight">
         <div class="icon">☀️</div>
         <div class="label">Light</div>
-        <div class="value"><span id="light">--</span><span class="unit">%</span></div>
-        <div class="secondary" id="lightLabel">--</div>
+        <div class="value value-text" id="lightLabel">--</div>
+        <div class="secondary"><span id="light">--</span>%</div>
       </div>
       <div class="card" id="cardDistance">
         <div class="icon">📏</div>
