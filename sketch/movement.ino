@@ -71,18 +71,18 @@ void updateMovement() {
   float az = movement.getZ();
   lastAx = ax; lastAy = ay; lastAz = az;
 
-  // Once per second, dump what we're seeing to the serial monitor.
+  // Once per second, dump what we're seeing to the USB serial monitor.
   if (millis() - lastDebugPrint >= 1000) {
     lastDebugPrint = millis();
-    Monitor.print("[mv] calls=");   Monitor.print(updateCalls);
-    Monitor.print(" avail=");       Monitor.print(avail ? 1 : 0);
-    Monitor.print(" ax=");          Monitor.print(ax, 3);
-    Monitor.print(" ay=");          Monitor.print(ay, 3);
-    Monitor.print(" az=");          Monitor.print(az, 3);
-    Monitor.print(" base=(");       Monitor.print(baseX, 3);
-    Monitor.print(",");             Monitor.print(baseY, 3);
-    Monitor.print(",");             Monitor.print(baseZ, 3);
-    Monitor.println(")");
+    Serial.print("[mv] calls=");   Serial.print(updateCalls);
+    Serial.print(" avail=");       Serial.print(avail ? 1 : 0);
+    Serial.print(" ax=");          Serial.print(ax, 3);
+    Serial.print(" ay=");          Serial.print(ay, 3);
+    Serial.print(" az=");          Serial.print(az, 3);
+    Serial.print(" base=(");       Serial.print(baseX, 3);
+    Serial.print(",");             Serial.print(baseY, 3);
+    Serial.print(",");             Serial.print(baseZ, 3);
+    Serial.println(")");
     updateCalls = 0;
   }
 

@@ -36,6 +36,7 @@ int displayMode = 0;
 void setup() {
   Bridge.begin();
   Monitor.begin(9600);
+  Serial.begin(9600);
 
   analogReadResolution(12);
 
