@@ -39,6 +39,10 @@ void recalibrateBaseline() {
   captureMovementBaseline();
 }
 
+bool isBaselineReady() {
+  return baselineReady;
+}
+
 int getMovementEvent() {
   int e = lastMovementEvent;
   lastMovementEvent = 0;  // one-shot read
@@ -67,11 +71,9 @@ void updateMovement() {
     tiltDeg = acos(cosA) * 180.0 / PI;
   }
 
-  float totalAccel = sqrt(ax*ax + ay*ay + az*az);
-
   int newEvent = 0;
   if (tiltDeg > TILT_THRESHOLD_DEG)        newEvent = 3; // TIPPING
-  else if (totalAccel > BUMP_THRESHOLD)    newEvent = 2; // BUMP
+  else if (magNow > BUMP_THRESHOLD)        newEvent = 2; // BUMP
   else if (motionDelta > MOTION_THRESHOLD) newEvent = 1; // MOVEMENT
 
   if (newEvent != 0) {
