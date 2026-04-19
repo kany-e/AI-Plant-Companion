@@ -7,6 +7,9 @@ bool  getPresence();
 int   getMovementEvent();
 void  recalibrateBaseline();
 bool  isBaselineReady();
+float getMotionDelta();
+float getTiltDeg();
+float getMagNow();
 
 void registerBridgeAPI() {
   Bridge.provide("getTempC",             getTempC);
@@ -17,4 +20,7 @@ void registerBridgeAPI() {
   Bridge.provide("getMovementEvent",     getMovementEvent);
   Bridge.provide("recalibrateBaseline",  recalibrateBaseline);
   Bridge.provide("isBaselineReady",      isBaselineReady);
+  Bridge.provide("getMotionDelta",       getMotionDelta);
+  Bridge.provide("getTiltDeg",           getTiltDeg);
+  Bridge.provide("getMagNow",            getMagNow);
 }

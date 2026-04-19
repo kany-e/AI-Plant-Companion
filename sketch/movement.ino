@@ -8,6 +8,10 @@ static float baseX = 0, baseY = 0, baseZ = 1.0;
 static bool  baselineReady = false;
 static unsigned long lastAlertTime = 0;
 
+static float lastMotionDelta = 0;
+static float lastTiltDeg = 0;
+static float lastMagNow = 0;
+
 void captureMovementBaseline() {
   float sumX = 0, sumY = 0, sumZ = 0;
   int samples = 0;
@@ -43,6 +47,10 @@ bool isBaselineReady() {
   return baselineReady;
 }
 
+float getMotionDelta() { return lastMotionDelta; }
+float getTiltDeg()     { return lastTiltDeg; }
+float getMagNow()      { return lastMagNow; }
+
 int getMovementEvent() {
   int e = lastMovementEvent;
   lastMovementEvent = 0;  // one-shot read
@@ -50,8 +58,8 @@ int getMovementEvent() {
 }
 
 void updateMovement() {
-  if (!movement.available() || !baselineReady) return;
-  if (millis() - lastAlertTime < ALERT_COOLDOWN_MS) return;
+  if (!baselineReady) return;
+  if (!movement.available()) return;
 
   float ax = movement.getX();
   float ay = movement.getY();
@@ -70,6 +78,13 @@ void updateMovement() {
     if (cosA < -1) cosA = -1;
     tiltDeg = acos(cosA) * 180.0 / PI;
   }
+
+  // Always publish live values so the dashboard can show what the sensor sees.
+  lastMotionDelta = motionDelta;
+  lastTiltDeg     = tiltDeg;
+  lastMagNow      = magNow;
+
+  if (millis() - lastAlertTime < ALERT_COOLDOWN_MS) return;
 
   int newEvent = 0;
   if (tiltDeg > TILT_THRESHOLD_DEG)        newEvent = 3; // TIPPING
