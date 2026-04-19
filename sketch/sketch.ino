@@ -5,7 +5,7 @@
 #include "config.h"
 
 // ---- Global hardware objects (defined once here) ----
-ModulinoThermo    thermo;
+ModulinoThermo     thermo;
 Arduino_LED_Matrix matrix;
 
 // ---- Shared state (set by sensor functions, read by bridge API) ----
@@ -20,10 +20,14 @@ void initSensors();
 int  getLightLevel();
 void updateDistance();
 
+void initLCD();
+void updateLCD(float tempC, float humidity, int light, bool presence);
+
 void registerBridgeAPI();
 
 // ---- Display rotation ----
 unsigned long lastDisplayUpdate = 0;
+unsigned long lastLcdUpdate     = 0;
 int displayMode = 0;
 
 void setup() {
@@ -37,12 +41,14 @@ void setup() {
 
   initDisplay();
   initSensors();
+  initLCD();
   registerBridgeAPI();
 }
 
 void loop() {
   updateDistance();
 
+  // LED matrix: scroll one of two messages every 500ms
   if (millis() - lastDisplayUpdate >= 500) {
     lastDisplayUpdate = millis();
 
@@ -58,6 +64,17 @@ void loop() {
 
     scrollMessage(msg, 80);
     displayMode = (displayMode + 1) % 2;
+  }
+
+  // LCD: refresh every 1s
+  if (millis() - lastLcdUpdate >= 1000) {
+    lastLcdUpdate = millis();
+    updateLCD(
+      thermo.getTemperature(),
+      thermo.getHumidity(),
+      getLightLevel(),
+      presenceDetected
+    );
   }
 
   delay(10);
