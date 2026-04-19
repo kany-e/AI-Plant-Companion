@@ -27,6 +27,9 @@ void updateMovement();
 void captureMovementBaseline();
 bool isBaselineReady();
 
+void initLCD();
+void updateLCD(float tempC, float humidity, int light, bool presence, int eventCode);
+
 void registerBridgeAPI();
 
 // ---- Display rotation ----
@@ -46,6 +49,7 @@ void setup() {
   initDisplay();
   initSensors();
   initMovement();
+  initLCD();
   registerBridgeAPI();
 }
 
@@ -56,14 +60,22 @@ void loop() {
   if (millis() - lastDisplayUpdate >= 500) {
     lastDisplayUpdate = millis();
 
+    // Read current sensor values (reused for both displays)
+    float curTemp  = thermo.getTemperature();
+    float curHum   = thermo.getHumidity();
+    int   curLight = getLightLevel();
+
+    // Update LCD with plant messages
+    updateLCD(curTemp, curHum, curLight, presenceDetected, lastMovementEvent);
+
+    // Update LED matrix (rotating temp/humidity and light)
     char msg[32];
     if (displayMode == 0) {
-      int t = (int)thermo.getTemperature();
-      int h = (int)thermo.getHumidity();
+      int t = (int)curTemp;
+      int h = (int)curHum;
       snprintf(msg, sizeof(msg), " %dC %d%% ", t, h);
     } else {
-      int l = getLightLevel();
-      snprintf(msg, sizeof(msg), " L %d%% ", l);
+      snprintf(msg, sizeof(msg), " L %d%% ", curLight);
     }
 
     scrollMessage(msg, 80);
