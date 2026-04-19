@@ -25,6 +25,7 @@ void updateDistance();
 void initMovement();
 void updateMovement();
 void captureMovementBaseline();
+bool isBaselineReady();
 
 void registerBridgeAPI();
 
