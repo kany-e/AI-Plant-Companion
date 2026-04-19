@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Plant Companion</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #e8f0ef;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .dashboard {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 24px;
+    padding: 36px;
+    max-width: 760px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  h1 { font-weight: 300; font-size: 26px; margin-bottom: 6px; }
+  h2 { font-weight: 300; font-size: 20px; margin-bottom: 10px; }
+  h3 { font-weight: 400; font-size: 14px; margin-bottom: 10px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1.2px; }
+  .subtitle { font-size: 13px; opacity: 0.6; margin-bottom: 20px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 6px; margin-bottom: 20px;
+    background: rgba(0,0,0,0.15);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #e8f0ef;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: rgba(255,255,255,0.12);
+    opacity: 1;
+  }
+  .tab:hover { opacity: 1; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Presence banner */
+  .presence-banner {
+    padding: 12px 18px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+    transition: opacity 0.4s, background 0.4s;
+  }
+  .presence-banner.idle {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    opacity: 0.6;
+  }
+  .presence-banner.alert {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    opacity: 1;
+  }
+
+  /* Mood banner — same visual family, plant-centered */
+  .mood-banner {
+    padding: 16px 20px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    display: flex; gap: 14px;
+    align-items: flex-start;
+    transition: all 0.4s;
+  }
+  .mood-banner.uncomfortable {
+    background: rgba(250, 204, 21, 0.12);
+    border-color: rgba(250, 204, 21, 0.35);
+  }
+  .mood-banner.alarmed {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  .mood-banner.unknown {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+    opacity: 0.7;
+  }
+  .mood-emoji { font-size: 36px; line-height: 1; }
+  .mood-content { flex: 1; }
+  .mood-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .mood-prompts { list-style: none; padding: 0; margin-top: 8px; }
+  .mood-prompts li {
+    font-size: 13px;
+    opacity: 0.85;
+    padding: 4px 0;
+    line-height: 1.4;
+  }
+  .mood-prompts li::before {
+    content: '💬 ';
+    margin-right: 4px;
+  }
+
+  /* Plant header (appears when setup is complete) */
+  .plant-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .plant-header .nickname { font-size: 22px; font-weight: 400; }
+  .plant-header .species {
+    font-size: 12px;
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  /* Sensor cards grid */
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px; }
+  @media (min-width: 640px) { .cards { grid-template-columns: repeat(4, 1fr); } }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 18px 14px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.3s, background 0.3s;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card.warn   { border-color: rgba(250, 204, 21, 0.5); background: rgba(250, 204, 21, 0.08); }
+  .card.alarm  { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.08); }
+  .card .icon { font-size: 24px; margin-bottom: 6px; }
+  .card .label { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .card .value { font-size: 30px; font-weight: 200; line-height: 1; }
+  .card .unit { font-size: 13px; opacity: 0.5; margin-left: 2px; }
+  .card .secondary { font-size: 11px; opacity: 0.55; margin-top: 6px; }
+
+  /* Buttons */
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #e8f0ef;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  button:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+  button.primary:hover:not(:disabled) { background: rgba(74, 222, 128, 0.3); }
+  button.danger {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  /* Setup + Health form elements */
+  .section {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .section p { font-size: 13px; opacity: 0.7; margin-bottom: 12px; line-height: 1.5; }
+
+  input[type="text"], input[type="file"] {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #e8f0ef;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 10px;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+
+  .setup-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .setup-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: block;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .result-box {
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .result-box.error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+  }
+
+  .issue {
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border-left: 3px solid rgba(250, 204, 21, 0.6);
+  }
+  .issue.high { border-left-color: rgba(239, 68, 68, 0.8); }
+  .issue.low  { border-left-color: rgba(74, 222, 128, 0.6); }
+  .issue .name { font-weight: 500; font-size: 14px; margin-bottom: 4px; }
+  .issue .evidence { font-size: 12px; opacity: 0.7; }
+
+  .treatment {
+    padding: 10px 14px;
+    background: rgba(74, 222, 128, 0.08);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .treatment::before { content: '✓ '; opacity: 0.7; margin-right: 4px; }
+
+  .hidden { display: none !important; }
+  .loading { opacity: 0.6; font-style: italic; }
+
+  .status { font-size: 11px; opacity: 0.55; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+<div class="dashboard">
+
+  <div class="plant-header">
+    <h1 id="plantNickname">🌱 AI Plant Companion</h1>
+    <span class="species" id="plantSpecies"></span>
+  </div>
+  <div class="subtitle">Real-time environmental monitoring</div>
+
+  <div class="tabs">
+    <button class="tab active" data-screen="dashboard">Dashboard</button>
+    <button class="tab" data-screen="health">Health</button>
+    <button class="tab" data-screen="setup">Setup</button>
+  </div>
+
+  <!-- ====================== DASHBOARD ====================== -->
+  <section class="screen active" id="screen-dashboard">
+
+    <div class="mood-banner unknown" id="moodBanner">
+      <div class="mood-emoji" id="moodEmoji">🌱</div>
+      <div class="mood-content">
+        <div class="mood-title" id="moodTitle">Waiting for setup…</div>
+        <ul class="mood-prompts" id="moodPrompts"></ul>
+      </div>
+    </div>
+
+    <div class="presence-banner idle" id="presenceBanner">
+      <span id="presenceIcon">🌙</span>
+      <span id="presenceText">All quiet around the plant.</span>
+    </div>
+
+    <div class="cards">
+      <div class="card" id="cardTemp">
+        <div class="icon">🌡️</div>
+        <div class="label">Temperature</div>
+        <div class="value"><span id="tempC">--</span><span class="unit">°C</span></div>
+        <div class="secondary"><span id="tempF">--</span> °F</div>
+      </div>
+      <div class="card" id="cardHumidity">
+        <div class="icon">💧</div>
+        <div class="label">Humidity</div>
+        <div class="value"><span id="humidity">--</span><span class="unit">%</span></div>
+        <div class="secondary">Relative</div>
+      </div>
+      <div class="card" id="cardLight">
+        <div class="icon">☀️</div>
+        <div class="label">Light</div>
+        <div class="value"><span id="light">--</span><span class="unit">%</span></div>
+        <div class="secondary" id="lightLabel">--</div>
+      </div>
+      <div class="card" id="cardDistance">
+        <div class="icon">📏</div>
+        <div class="label">Distance</div>
+        <div class="value"><span id="distance">--</span><span class="unit">mm</span></div>
+        <div class="secondary" id="distanceLabel">Detecting…</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button onclick="recalibrate()">🔄 Recalibrate position</button>
+      <button onclick="showScreen('health')">🩺 Run health check</button>
+    </div>
+
+    <div class="status">
+      <div class="dot"></div>
+      <span>Last update: <span id="updated">--</span></span>
+    </div>
+  </section>
+
+  <!-- ====================== SETUP ====================== -->
+  <section class="screen" id="screen-setup">
+
+    <div class="section">
+      <h3>Step 1 — Tell me about your plant</h3>
+      <p>Upload a photo to have the AI identify it, or type its name directly.</p>
+
+      <div class="setup-grid">
+        <div>
+          <label style="font-size:12px; opacity:0.7;">📷 Identify from photo</label>
+          <input type="file" id="identifyFile" accept="image/*" style="margin-top:6px;" />
+          <img id="identifyPreview" class="preview hidden" />
+          <button id="identifyBtn" class="primary" disabled>Identify plant</button>
+          <div id="identifyResult" class="result-box hidden"></div>
+        </div>
+        <div>
+          <label style="font-size:12px; opacity:0.7;">✍️ Or type the name</label>
+          <input type="text" id="manualSpecies" placeholder="e.g. Monstera deliciosa, Pothos" style="margin-top:6px;" />
+          <p style="font-size:11px; opacity:0.5;">Scientific or common name both work.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Step 2 — Give your plant a name</h3>
+      <p>Something friendly — this is how it'll refer to itself.</p>
+      <input type="text" id="nicknameInput" placeholder="e.g. Monty, Fernando, Little Green" />
+      <div class="actions" style="margin-top:6px; justify-content:flex-start;">
+        <button id="savePlantBtn" class="primary">Save & continue</button>
+      </div>
+      <div id="saveError" class="result-box error hidden" style="margin-top:10px;"></div>
+    </div>
+  </section>
+
+  <!-- ====================== HEALTH ====================== -->
+  <section class="screen" id="screen-health">
+
+    <div class="section">
+      <h3>📋 Photo diagnostic</h3>
+      <p>Upload a close-up of your plant. The AI will look for health issues and suggest treatments.</p>
+      <input type="file" id="diagnoseFile" accept="image/*" />
+      <img id="diagnosePreview" class="preview hidden" />
+      <div class="actions" style="justify-content:flex-start;">
+        <button id="diagnoseBtn" class="primary" disabled>Run diagnostic</button>
+      </div>
+      <div id="diagnoseStatus" class="result-box hidden" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="section hidden" id="diagnosticResult">
+      <h3 id="diagnosticHeader">Last diagnostic</h3>
+      <div id="diagnosticSummary" style="font-size:13px; line-height:1.5; margin-bottom:14px;"></div>
+
+      <h3 style="margin-top:14px;">Issues found</h3>
+      <div id="diagnosticIssues"></div>
+
+      <h3 style="margin-top:14px;">Recommended treatments</h3>
+      <div id="diagnosticTreatments"></div>
+
+      <p style="font-size:11px; opacity:0.5; margin-top:14px;" id="diagnosticTimestamp"></p>
+    </div>
+
+    <div class="section">
+      <h3>⚠️ Reset plant</h3>
+      <p>Start over with a different plant. This clears the current profile and diagnostic.</p>
+      <div class="actions" style="justify-content:flex-start;">
+        <button class="danger" onclick="resetPlant()">Reset plant</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ==========================================================================
+// Label helpers (preserved from your version)
+// ==========================================================================
+function lightTier(pct) {
+  if (pct == null) return '--';
+  if (pct <= 20) return 'Dark';
+  if (pct <= 40) return 'Dim';
+  if (pct <= 60) return 'Moderate';
+  if (pct <= 80) return 'Bright';
+  return 'Full light';
+}
+function distanceLabel(mm) {
+  if (mm == null || mm >= 9000) return 'Out of range';
+  if (mm < 100) return 'Right in front';
+  if (mm < 300) return 'Close';
+  if (mm < 500) return 'Nearby';
+  if (mm < 1000) return 'Around';
+  return 'Far';
+}
+
+// ==========================================================================
+// Navigation
+// ==========================================================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.screen === name);
+  });
+}
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => showScreen(t.dataset.screen));
+});
+
+// ==========================================================================
+// State
+// ==========================================================================
+let lastIdentify = null;
+let identifyImage = null;
+let diagnoseImage = null;
+let cachedProfile = null;
+let setupJumped = false;  // only auto-jump once
+
+// ==========================================================================
+// Event banner (preserved from your version)
+// ==========================================================================
+let lastEventShownAt = null;
+const EVENT_DISPLAY_MS = 5000;
+const EVENT_INFO = {
+  movement: { icon: '👋', text: "The plant felt a movement.",    color: 'alert' },
+  bump:     { icon: '💥', text: "The plant got bumped!",         color: 'alert' },
+  tipping:  { icon: '⚠️', text: "The plant is tipping over!",    color: 'alert' },
+};
+
+function updatePresenceBanner(s) {
+  const banner = document.getElementById('presenceBanner');
+  const icon   = document.getElementById('presenceIcon');
+  const text   = document.getElementById('presenceText');
+
+  const now = Date.now();
+  if (s.last_event && s.last_event_time) {
+    if (lastEventShownAt === null || s.last_event_time !== window._lastEventTimeSeen) {
+      window._lastEventTimeSeen = s.last_event_time;
+      lastEventShownAt = now;
+    }
+    if (now - lastEventShownAt < EVENT_DISPLAY_MS) {
+      const info = EVENT_INFO[s.last_event] || { icon: '❗', text: `Event: ${s.last_event}` };
+      icon.textContent = info.icon;
+      text.textContent = info.text;
+      banner.className = 'presence-banner alert';
+      return;
+    }
+  }
+
+  if (s.presence) {
+    icon.textContent = '👤';
+    text.textContent = "Someone's near the plant.";
+    banner.className = 'presence-banner';
+  } else {
+    icon.textContent = '🌙';
+    text.textContent = 'All quiet around the plant.';
+    banner.className = 'presence-banner idle';
+  }
+}
+
+// ==========================================================================
+// Mood banner — plant's feelings about its environment
+// ==========================================================================
+const MOOD_CONFIG = {
+  happy:         { emoji: '😊', title: "I'm comfortable here." },
+  uncomfortable: { emoji: '😟', title: 'Something feels off.' },
+  alarmed:       { emoji: '🚨', title: 'I need help!' },
+  unknown:       { emoji: '🌱', title: 'Waiting for setup…' },
+};
+
+function updateMoodBanner(s, plant) {
+  const banner  = document.getElementById('moodBanner');
+  const emoji   = document.getElementById('moodEmoji');
+  const title   = document.getElementById('moodTitle');
+  const prompts = document.getElementById('moodPrompts');
+
+  const mood = s.mood || 'unknown';
+  const cfg  = MOOD_CONFIG[mood] || MOOD_CONFIG.unknown;
+
+  banner.className = 'mood-banner ' + mood;
+  emoji.textContent = cfg.emoji;
+
+  if (plant && plant.nickname && mood !== 'unknown') {
+    title.textContent = plant.nickname + ' says: "' + cfg.title + '"';
+  } else {
+    title.textContent = cfg.title;
+  }
+
+  prompts.innerHTML = '';
+  (s.prompts || []).forEach(p => {
+    const li = document.createElement('li');
+    li.textContent = p;
+    prompts.appendChild(li);
+  });
+}
+
+// ==========================================================================
+// Card health classification (green/yellow/red borders)
+// ==========================================================================
+function classifyCard(value, range) {
+  if (!range || value == null) return '';
+  if (value < range.min || value > range.max) return 'alarm';
+  const span = range.max - range.min;
+  const margin = span * 0.1;
+  if (value < range.min + margin || value > range.max - margin) return 'warn';
+  return '';
+}
+
+function applyCardClass(cardId, cls) {
+  const el = document.getElementById(cardId);
+  el.classList.remove('warn', 'alarm');
+  if (cls) el.classList.add(cls);
+}
+
+// ==========================================================================
+// Plant header
+// ==========================================================================
+function updatePlantHeader(plant) {
+  const h = document.getElementById('plantNickname');
+  const sp = document.getElementById('plantSpecies');
+  if (plant && plant.nickname) {
+    h.textContent = '🌱 ' + plant.nickname;
+    sp.textContent = plant.common_name || plant.species || '';
+  } else {
+    h.textContent = '🌱 AI Plant Companion';
+    sp.textContent = '';
+  }
+}
+
+// ==========================================================================
+// Main polling loop
+// ==========================================================================
+async function fetchReadings() {
+  try {
+    const r = await fetch('/api/readings');
+    const d = await r.json();
+    const s = d.state || {};
+    const plant = d.plant || {};
+
+    // Auto-jump to setup once if plant isn't configured
+    if (!plant.setup_complete && !setupJumped) {
+      setupJumped = true;
+      showScreen('setup');
+    }
+
+    updatePlantHeader(plant);
+
+    // Sensor cards
+    document.getElementById('tempC').textContent    = s.temperature_c ?? '--';
+    document.getElementById('tempF').textContent    = s.temperature_f ?? '--';
+    document.getElementById('humidity').textContent = s.humidity ?? '--';
+    document.getElementById('light').textContent    = s.light_level ?? '--';
+    document.getElementById('lightLabel').textContent = lightTier(s.light_level);
+
+    const dist = s.distance_mm;
+    document.getElementById('distance').textContent = (dist == null || dist >= 9000) ? '--' : dist;
+    document.getElementById('distanceLabel').textContent = distanceLabel(dist);
+    document.getElementById('updated').textContent = s.updated ?? '--';
+
+    // Color-code the cards against the plant profile
+    if (plant.setup_complete) {
+      const profile = await getProfile();
+      if (profile) {
+        applyCardClass('cardTemp',     classifyCard(s.temperature_c, profile.temp_c));
+        applyCardClass('cardHumidity', classifyCard(s.humidity,      profile.humidity));
+        applyCardClass('cardLight',    classifyCard(s.light_level,   profile.light_pct));
+      }
+    }
+
+    updatePresenceBanner(s);
+    updateMoodBanner(s, plant);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function getProfile() {
+  if (cachedProfile) return cachedProfile;
+  try {
+    const r = await fetch('/api/plant');
+    const d = await r.json();
+    cachedProfile = d.profile;
+    return cachedProfile;
+  } catch { return null; }
+}
+
+// ==========================================================================
+// Recalibrate (preserved from your version)
+// ==========================================================================
+async function recalibrate() {
+  try {
+    const r = await fetch('/api/recalibrate', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      const banner = document.getElementById('presenceBanner');
+      document.getElementById('presenceIcon').textContent = '✅';
+      document.getElementById('presenceText').textContent = 'Position recalibrated.';
+      banner.className = 'presence-banner';
+      setTimeout(fetchReadings, 1500);
+    }
+  } catch (e) { console.error(e); }
+}
+
+// ==========================================================================
+// File -> base64 helper
+// ==========================================================================
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve({ b64: r.result.split(',')[1], dataUrl: r.result, type: file.type });
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// ==========================================================================
+// Identify (setup)
+// ==========================================================================
+document.getElementById('identifyFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const { b64, dataUrl, type } = await fileToBase64(file);
+  identifyImage = { b64, type };
+  const img = document.getElementById('identifyPreview');
+  img.src = dataUrl;
+  img.classList.remove('hidden');
+  document.getElementById('identifyBtn').disabled = false;
+});
+
+document.getElementById('identifyBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('identifyBtn');
+  const out = document.getElementById('identifyResult');
+  btn.disabled = true;
+  btn.textContent = 'Identifying…';
+  out.classList.remove('hidden', 'error');
+  out.innerHTML = '<span class="loading">Asking the AI to identify your plant…</span>';
+  try {
+    const r = await fetch('/api/identify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: identifyImage.b64, media_type: identifyImage.type }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'identify failed');
+    lastIdentify = d.result;
+    out.innerHTML = `
+      <strong>${d.result.common_name || d.result.species}</strong>
+      <span style="opacity:0.6">(${d.result.confidence} confidence)</span><br>
+      <span style="opacity:0.7; font-size:12px;">${d.result.notes || ''}</span>
+    `;
+    document.getElementById('manualSpecies').value = d.result.species || '';
+    if (!document.getElementById('nicknameInput').value) {
+      document.getElementById('nicknameInput').value = d.result.common_name || '';
+    }
+  } catch (e) {
+    out.classList.add('error');
+    out.textContent = 'Could not identify: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Identify plant';
+  }
+});
+
+// ==========================================================================
+// Save plant (setup)
+// ==========================================================================
+document.getElementById('savePlantBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('savePlantBtn');
+  const err = document.getElementById('saveError');
+  const species = document.getElementById('manualSpecies').value.trim();
+  const nickname = document.getElementById('nicknameInput').value.trim();
+  err.classList.add('hidden');
+
+  if (!species) {
+    err.textContent = 'Please enter a plant name or identify one from a photo.';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Looking up care info…';
+  try {
+    const common_name = lastIdentify ? lastIdentify.common_name : null;
+    const r = await fetch('/api/select_plant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ species, common_name, nickname }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'save failed');
+    cachedProfile = d.plant.profile;
+    showScreen('dashboard');
+    fetchReadings();
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save & continue';
+  }
+});
+
+// ==========================================================================
+// Diagnose (health)
+// ==========================================================================
+document.getElementById('diagnoseFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const { b64, dataUrl, type } = await fileToBase64(file);
+  diagnoseImage = { b64, type };
+  const img = document.getElementById('diagnosePreview');
+  img.src = dataUrl;
+  img.classList.remove('hidden');
+  document.getElementById('diagnoseBtn').disabled = false;
+});
+
+document.getElementById('diagnoseBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('diagnoseBtn');
+  const status = document.getElementById('diagnoseStatus');
+  btn.disabled = true;
+  btn.textContent = 'Examining…';
+  status.classList.remove('hidden', 'error');
+  status.innerHTML = '<span class="loading">The AI is looking at your plant…</span>';
+  try {
+    const r = await fetch('/api/diagnose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: diagnoseImage.b64, media_type: diagnoseImage.type }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'diagnose failed');
+    renderDiagnostic(d.result, new Date().toLocaleString());
+    status.classList.add('hidden');
+  } catch (e) {
+    status.classList.add('error');
+    status.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run diagnostic';
+  }
+});
+
+function renderDiagnostic(result, timestamp) {
+  const card = document.getElementById('diagnosticResult');
+  card.classList.remove('hidden');
+
+  document.getElementById('diagnosticSummary').innerHTML =
+    `<strong>Overall health:</strong> ${result.overall_health}<br><span style="opacity:0.8;">${result.summary || ''}</span>`;
+
+  const issuesEl = document.getElementById('diagnosticIssues');
+  if (!result.issues || result.issues.length === 0) {
+    issuesEl.innerHTML = '<p style="opacity:0.6; font-size:13px;">None detected — looking healthy!</p>';
+  } else {
+    issuesEl.innerHTML = result.issues.map(i => `
+      <div class="issue ${i.severity}">
+        <div class="name">${i.name} <span style="opacity:0.6; font-size:11px;">(${i.severity})</span></div>
+        <div class="evidence">${i.evidence || ''}</div>
+      </div>
+    `).join('');
+  }
+
+  const txEl = document.getElementById('diagnosticTreatments');
+  txEl.innerHTML = (result.treatments && result.treatments.length)
+    ? result.treatments.map(t => `<div class="treatment">${t}</div>`).join('')
+    : '<p style="opacity:0.6; font-size:13px;">No specific treatments needed.</p>';
+
+  document.getElementById('diagnosticTimestamp').textContent = 'Run at ' + timestamp;
+}
+
+// Load any persisted diagnostic on startup
+async function loadLastDiagnostic() {
+  try {
+    const r = await fetch('/api/plant');
+    const d = await r.json();
+    if (d.last_diagnostic) {
+      renderDiagnostic(d.last_diagnostic.result, d.last_diagnostic.timestamp);
+    }
+  } catch {}
+}
+
+// ==========================================================================
+// Reset
+// ==========================================================================
+async function resetPlant() {
+  if (!confirm('Reset and start over with a new plant?')) return;
+  await fetch('/api/reset_plant', { method: 'POST' });
+  cachedProfile = null;
+  setupJumped = false;
+  location.reload();
+}
+
+// ==========================================================================
+// Boot
+// ==========================================================================
+loadLastDiagnostic();
+fetchReadings();
+setInterval(fetchReadings, 1000);
+</script>
+</body>
+</html>
