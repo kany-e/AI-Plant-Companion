@@ -75,10 +75,5 @@ void updateDistance() {
       lastDistanceMm = 9999;
       presenceDetected = false;
     }
-
-    Monitor.print("ToF: ");
-    Monitor.print(results.distance_mm);
-    Monitor.print(" mm  status=");
-    Monitor.println(results.range_status);
   }
 }

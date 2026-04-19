@@ -6,13 +6,11 @@
 
 // ---- Global hardware objects (defined once here) ----
 ModulinoThermo    thermo;
-ModulinoMovement  movement;
 Arduino_LED_Matrix matrix;
 
 // ---- Shared state (set by sensor functions, read by bridge API) ----
 int  lastDistanceMm   = 9999;
 bool presenceDetected = false;
-int  lastMovementEvent = 0;
 
 // ---- Forward declarations (functions defined in other .ino files) ----
 void initDisplay();
@@ -21,11 +19,6 @@ void scrollMessage(const char* msg, int frameDelay);
 void initSensors();
 int  getLightLevel();
 void updateDistance();
-
-void initMovement();
-void updateMovement();
-void captureMovementBaseline();
-bool isBaselineReady();
 
 void registerBridgeAPI();
 
@@ -36,23 +29,19 @@ int displayMode = 0;
 void setup() {
   Bridge.begin();
   Monitor.begin(9600);
-  Serial.begin(9600);
 
   analogReadResolution(12);
 
   Modulino.begin(Wire1);
   thermo.begin();
-  movement.begin();
 
   initDisplay();
   initSensors();
-  initMovement();
   registerBridgeAPI();
 }
 
 void loop() {
   updateDistance();
-  updateMovement();
 
   if (millis() - lastDisplayUpdate >= 500) {
     lastDisplayUpdate = millis();
