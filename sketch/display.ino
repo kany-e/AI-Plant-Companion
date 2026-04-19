@@ -1,6 +1,7 @@
 #include "config.h"
 
 extern Arduino_LED_Matrix matrix;
+extern void updateMovement();
 
 // 5x7 font
 static const uint8_t FONT[][5] = {
@@ -65,7 +66,13 @@ void scrollMessage(const char* msg, int frameDelay) {
   for (int offset = 0; offset <= total - COLS; offset++) {
     packFrame(cols, offset, frame);
     matrix.loadFrame(frame);
-    delay(frameDelay);
+    // Keep polling the IMU during the frame delay so movement events
+    // aren't missed while the matrix is scrolling.
+    unsigned long t0 = millis();
+    while (millis() - t0 < (unsigned long)frameDelay) {
+      updateMovement();
+      delay(2);
+    }
   }
 }
 
