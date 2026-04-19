@@ -7,6 +7,8 @@ print("=== AI Plant Companion starting ===")
 
 ui = WebUI()
 
+MOOD_TAGS = {"happy": "😊", "uncomfortable": "😟", "alarmed": "🚨"}
+
 state = {
     "temperature_c": None,
     "temperature_f": None,
@@ -14,6 +16,7 @@ state = {
     "light_level": None,
     "distance_mm": None,
     "presence": False,
+    "mood": None,
     "updated": None,
     "history": [],
 }
@@ -38,6 +41,15 @@ def sanitize(obj):
         return [sanitize(v) for v in obj]
     return obj
 
+def compute_mood(temp_c, hum, light):
+    if temp_c is None or hum is None:
+        return None
+    if temp_c < 10 or temp_c > 32 or hum < 20 or hum > 85:
+        return "alarmed"
+    if temp_c < 16 or temp_c > 28 or hum < 35 or hum > 70:
+        return "uncomfortable"
+    return "happy"
+
 def get_readings():
     return sanitize(state)
 
@@ -59,6 +71,7 @@ def loop():
         state["distance_mm"]   = dist_mm if isinstance(dist_mm, int) and dist_mm != 9999 else None
         state["presence"]      = bool(presence)
         state["updated"]       = time.strftime("%H:%M:%S")
+        state["mood"]          = compute_mood(temp_c_clean, state["humidity"], state["light_level"])
 
         state["history"].append({
             "t": state["updated"],
@@ -68,11 +81,12 @@ def loop():
         })
         state["history"] = state["history"][-60:]
 
+        mood_tag = MOOD_TAGS.get(state["mood"], "  ")
         presence_tag = "P" if state["presence"] else " "
         dist_str = "----" if state["distance_mm"] is None else f"{state['distance_mm']:4d}"
         t_str    = "--"   if temp_c_clean is None else f"{temp_c_clean:.1f}"
         h_str    = "--"   if state["humidity"] is None else f"{state['humidity']:.1f}"
-        print(f"{presence_tag} T={t_str}C  H={h_str}%  L={state['light_level']}%  D={dist_str}mm")
+        print(f"{mood_tag} {presence_tag} T={t_str}C  H={h_str}%  L={state['light_level']}%  D={dist_str}mm")
     except Exception as e:
         print(f"Error: {e}")
 
