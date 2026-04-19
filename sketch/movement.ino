@@ -17,12 +17,11 @@ void captureMovementBaseline() {
   int samples = 0;
   unsigned long start = millis();
   while (millis() - start < 1500) {
-    if (movement.available()) {
-      sumX += movement.getX();
-      sumY += movement.getY();
-      sumZ += movement.getZ();
-      samples++;
-    }
+    movement.available();  // best-effort refresh
+    sumX += movement.getX();
+    sumY += movement.getY();
+    sumZ += movement.getZ();
+    samples++;
     delay(40);
   }
   if (samples > 0) {
@@ -59,7 +58,10 @@ int getMovementEvent() {
 
 void updateMovement() {
   if (!baselineReady) return;
-  if (!movement.available()) return;
+  // Don't gate on movement.available(); the Modulino flag was only
+  // firing once per session, which froze the live values at zero.
+  // Reading directly returns the latest cached sample.
+  movement.available();  // best-effort refresh
 
   float ax = movement.getX();
   float ay = movement.getY();
