@@ -12,6 +12,10 @@ static float lastMotionDelta = 0;
 static float lastTiltDeg = 0;
 static float lastMagNow = 0;
 
+static float lastAx = 0, lastAy = 0, lastAz = 0;
+static unsigned long updateCalls = 0;
+static unsigned long lastDebugPrint = 0;
+
 void captureMovementBaseline() {
   float sumX = 0, sumY = 0, sumZ = 0;
   int samples = 0;
@@ -57,15 +61,30 @@ int getMovementEvent() {
 }
 
 void updateMovement() {
+  updateCalls++;
+
   if (!baselineReady) return;
-  // Don't gate on movement.available(); the Modulino flag was only
-  // firing once per session, which froze the live values at zero.
-  // Reading directly returns the latest cached sample.
-  movement.available();  // best-effort refresh
+  bool avail = movement.available();
 
   float ax = movement.getX();
   float ay = movement.getY();
   float az = movement.getZ();
+  lastAx = ax; lastAy = ay; lastAz = az;
+
+  // Once per second, dump what we're seeing to the serial monitor.
+  if (millis() - lastDebugPrint >= 1000) {
+    lastDebugPrint = millis();
+    Monitor.print("[mv] calls=");   Monitor.print(updateCalls);
+    Monitor.print(" avail=");       Monitor.print(avail ? 1 : 0);
+    Monitor.print(" ax=");          Monitor.print(ax, 3);
+    Monitor.print(" ay=");          Monitor.print(ay, 3);
+    Monitor.print(" az=");          Monitor.print(az, 3);
+    Monitor.print(" base=(");       Monitor.print(baseX, 3);
+    Monitor.print(",");             Monitor.print(baseY, 3);
+    Monitor.print(",");             Monitor.print(baseZ, 3);
+    Monitor.println(")");
+    updateCalls = 0;
+  }
 
   float dx = ax - baseX, dy = ay - baseY, dz = az - baseZ;
   float motionDelta = sqrt(dx*dx + dy*dy + dz*dz);
