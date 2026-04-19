@@ -1,7 +1,6 @@
 #include "config.h"
 
 extern Arduino_LED_Matrix matrix;
-extern void updateMovement();
 
 // 5x7 font
 static const uint8_t FONT[][5] = {
